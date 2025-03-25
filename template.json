@@ -52,7 +52,7 @@
         "openai_embedding_endpoint": {
             "type": "string"
         },
-        "indexer": {
+        "indexes": {
             "type": "string"
         }
 	},
@@ -530,7 +530,7 @@
                                     },
                                     "type": "Http",
                                     "inputs": {
-                                        "uri": "[concat(parameters('aisearch_endpoint'), '/indexes/', parameters('indexer'), '/docs/search?api-version=2023-10-01-Preview')]",
+                                        "uri": "[concat(parameters('aisearch_endpoint'), '/indexes/', parameters('indexes'), '/docs/search?api-version=2023-10-01-Preview')]",
                                         "method": "POST",
                                         "headers": {
                                             "Content-Type": "application/json",
