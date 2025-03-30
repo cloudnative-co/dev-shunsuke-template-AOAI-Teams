@@ -52,7 +52,7 @@
         "openai_embedding_endpoint": {
             "type": "string"
         },
-        "indexes": {
+        "semantic_configuration": {
             "type": "string"
         }
 	},
@@ -185,29 +185,6 @@
                                         }
                                     }
                                 },
-                                "Compose": {
-                                    "runAfter": {
-                                        "HTTP_1": [
-                                            "Succeeded"
-                                        ]
-                                    },
-                                    "type": "Compose",
-                                    "inputs": "@replace(variables('HistoricalMessages'), '{{UserPlaceHolder}}', outputs('Compose_-_Format_Teams_message'))"
-                                },
-                                "Compose_-_Format_Teams_message": {
-									"inputs": "@replace(replace(replace(replace(body('Parse_JSON_3')?['body']?['plainTextContent'], '\\', '\\\\'), '\"', '\\\"'), '\n', '\\r'), '\n', '\\n')",
-									"runAfter": {
-										"Set_variable": [
-											"Succeeded",
-											"Skipped"
-										],
-										"Set_variable_2": [
-											"Succeeded",
-											"Skipped"
-										]
-									},
-									"type": "Compose"
-								},
                                 "Compose_-_Get_First_Choice": {
                                     "runAfter": {
                                         "Parse_JSON_2": [
@@ -218,39 +195,39 @@
                                     "inputs": "@first(body('Parse_JSON_2')?['choices'])?['message']?['content']"
                                 },
                                 "Create_blob_(V2)": {
-									"runAfter": {
-										"Get_blob_content_using_path_(V2)": [
-											"Failed"
-										]
-									},
-									"type": "ApiConnection",
-									"inputs": {
-										"body": "[[\n\t\t{\n\t\t\t\"role\": \"system\",\n\t\t\t\"content\": \"@{parameters('openaiRole')} Please answer in Japanese.\"\n\t\t},\n {\n \"content\": \"{{UserPlaceHolder}}\",\n \"role\": \"user\"\n }\n\t]",
-										"headers": {
-											"ReadFileMetadataFromServer": true
-										},
-										"host": {
-											"connection": {
-												"name": "@parameters('$connections')['azureblob']['connectionId']"
-											}
-										},
-										"method": "post",
-										"path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent(parameters('storageaccountName')))}/files",
-										"queries": {
-											"folderPath": "@parameters('containerName')",
-											"name": "@{body('Parse_JSON_3')?['replyToId']}.json",
-											"queryParametersSingleEncoded": true
-										}
-									},
-									"runtimeConfiguration": {
-										"contentTransfer": {
-											"transferMode": "Chunked"
-										}
-									}
-								},
+                                    "runAfter": {
+                                        "Get_blob_content_using_path_(V2)": [
+                                            "Failed"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "body": "[[\n\t\t{\n\t\t\t\"role\": \"system\",\n\t\t\t\"content\": \"@{parameters('openaiRole')} Please answer in Japanese.\"\n\t\t},\n {\n \"content\": \"{{UserPlaceHolder}}\",\n \"role\": \"user\"\n }\n\t]",
+                                        "headers": {
+                                            "ReadFileMetadataFromServer": true
+                                        },
+                                        "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent(parameters('storageaccountName')))}/files",
+                                        "queries": {
+                                            "folderPath": "@parameters('containerName')",
+                                            "name": "@{body('Parse_JSON_3')?['replyToId']}.json",
+                                            "queryParametersSingleEncoded": true
+                                        }
+                                    },
+                                    "runtimeConfiguration": {
+                                        "contentTransfer": {
+                                            "transferMode": "Chunked"
+                                        }
+                                    }
+                                },
                                 "Get_blob_content_using_path_(V2)": {
                                     "runAfter": {
-                                        "Parse_JSON_3": [
+                                        "Compose_-_Format_Teams_message-copy": [
                                             "Succeeded"
                                         ]
                                     },
@@ -271,51 +248,22 @@
                                     }
                                 },
                                 "Get_message_details": {
-									"runAfter": {},
-									"type": "ApiConnection",
-									"inputs": {
-										"body": {
-											"recipient": {
-												"channelId": "@decodeUriComponent(parameters('channelId'))",
-												"groupId": "[parameters('teams_group_id')]",
-												"parentMessageId": "@items('For_each_3')?['replyToMessageId']"
-											}
-										},
-										"host": {
-											"connection": {
-												"name": "@parameters('$connections')['teams']['connectionId']"
-											}
-										},
-										"method": "post",
-										"path": "/beta/teams/messages/@{encodeURIComponent(items('For_each_3')?['messageId'])}/messageType/@{encodeURIComponent('channel')}"
-									}
-								},
-                                "HTTP": {
-                                    "runAfter": {
-                                        "Compose": [
-                                            "Succeeded"
-                                        ]
-                                    },
-                                    "type": "Http",
+                                    "type": "ApiConnection",
                                     "inputs": {
-                                        "uri": "[parameters('openai_endpoint')]",
-                                        "method": "POST",
-                                        "headers": {
-                                            "Content-Type": "application/json",
-                                            "api-key": "[parameters('openai_apikey')]"
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['teams']['connectionId']"
+                                            }
                                         },
+                                        "method": "post",
                                         "body": {
-                                            "messages": [
-                                                {
-                                                    "content": "You are an excellent assistant. You answer questions from users in Japanese based on context. If you answer based on context, also tell the user the number of the doc you referenced. If there is no relevant information in the context, please answer if you can with your knowledge.",
-                                                    "role": "system"
-                                                },
-                                                {
-                                                    "content": "<context><doc1>@{body('HTTP_1')?['value'][0]['title_en']}:@{body('HTTP_1')?['value'][0]['answer_en']}</doc1><doc2>@{body('HTTP_1')?['value'][1]['title_en']}:@{body('HTTP_1')?['value'][1]['answer_en']} </doc2><doc3>@{body('HTTP_1')?['value'][2]['title_en']}:@{body('HTTP_1')?['value'][2]['answer_en']}<doc3><doc4>@{body('HTTP_1')?['value'][3]['title_en']}:@{body('HTTP_1')?['value'][3]['answer_en']}<doc4><doc5>@{body('HTTP_1')?['value'][4]['title_en']}:@{body('HTTP_1')?['value'][4]['answer_en']}<doc5></context><question>@{outputs('Compose')}</question>",
-                                                    "role": "user"
-                                                }
-                                            ]
-                                        }
+                                            "recipient": {
+                                                "groupId": "[parameters('teams_group_id')]",
+                                                "channelId": "@decodeUriComponent(parameters('channelId'))",
+                                                "parentMessageId": "@items('For_each_3')?['replyToMessageId']"
+                                            }
+                                        },
+                                        "path": "/beta/teams/messages/@{encodeURIComponent(items('For_each_3')?['messageId'])}/messageType/@{encodeURIComponent('channel')}"
                                     }
                                 },
                                 "Parse_JSON": {
@@ -326,7 +274,7 @@
                                     },
                                     "type": "ParseJson",
                                     "inputs": {
-                                        "content": "@outputs('Compose')",
+                                        "content": "@variables('HistoricalMessages')",
                                         "schema": {
                                             "items": {
                                                 "properties": {
@@ -349,13 +297,18 @@
                                 },
                                 "Parse_JSON_2": {
                                     "runAfter": {
-                                        "HTTP": [
-                                            "Succeeded"
+                                        "Set_ai_responce_object": [
+                                            "Succeeded",
+                                            "Skipped"
+                                        ],
+                                        "Set_ai_responce_object-copy": [
+                                            "Succeeded",
+                                            "Skipped"
                                         ]
                                     },
                                     "type": "ParseJson",
                                     "inputs": {
-                                        "content": "@body('HTTP')",
+                                        "content": "@variables('ai_responce_object')",
                                         "schema": {
                                             "properties": {
                                                 "choices": {
@@ -441,42 +394,30 @@
                                     }
                                 },
                                 "Reply_with_a_message_in_a_channel": {
-									"runAfter": {
-										"Compose_-_Get_First_Choice": [
-											"Succeeded"
-										]
-									},
-									"type": "ApiConnection",
-									"inputs": {
-										"body": {
-											"messageBody": "<p>@{replace(outputs('Compose_-_Get_First_Choice'), '\n', '<br/>')}</p>",
-											"parentMessageId": "@items('For_each_3')?['replyToMessageId']",
-											"recipient": {
-												"channelId": "@decodeUriComponent(parameters('channelId'))",
-												"groupId": "[parameters('teams_group_id')]"
-											}
-										},
-										"host": {
-											"connection": {
-												"name": "@parameters('$connections')['teams']['connectionId']"
-											}
-										},
-										"method": "post",
-										"path": "/v1.0/teams/conversation/replyWithMessage/poster/@{encodeURIComponent('User')}/location/@{encodeURIComponent('Channel')}"
-									}
-								},
-                                "Set_variable": {
-									"runAfter": {
-										"Create_blob_(V2)": [
-											"Succeeded"
-										]
-									},
-									"type": "SetVariable",
-									"inputs": {
-										"name": "HistoricalMessages",
-										"value": "[\n\t\t{\n\t\t\t\"role\": \"system\",\n\t\t\t\"content\": \"@{parameters('openaiRole')} Please answer in Japanese.\"\n\t\t},\n {\n \"content\": \"{{UserPlaceHolder}}\",\n \"role\": \"user\"\n }\n\t]\n"
-									}
-								},
+                                    "runAfter": {
+                                        "Compose_-_Get_First_Choice": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['teams']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "body": {
+                                            "parentMessageId": "@items('For_each_3')?['replyToMessageId']",
+                                            "recipient": {
+                                                "groupId": "[parameters('teams_group_id')]",
+                                                "channelId": "@decodeUriComponent(parameters('channelId'))"
+                                            },
+                                            "messageBody": "<p class=\"editor-paragraph\">@{replace(outputs('Compose_-_Get_First_Choice'), '\n', '<br/>')}</p>"
+                                        },
+                                        "path": "/v1.0/teams/conversation/replyWithMessage/poster/@{encodeURIComponent('User')}/location/@{encodeURIComponent('Channel')}"
+                                    }
+                                },
                                 "Set_variable_-_Store_Previous_Convertsation": {
                                     "runAfter": {
                                         "Parse_JSON": [
@@ -489,7 +430,7 @@
                                         "value": "@body('Parse_JSON')"
                                     }
                                 },
-                                "Set_variable_2": {
+                                "Set_Content": {
                                     "runAfter": {
                                         "Get_blob_content_using_path_(V2)": [
                                             "Succeeded"
@@ -502,68 +443,29 @@
                                     }
                                 },
                                 "Update_blob_(V2)": {
-									"runAfter": {
-										"Append_to_array_variable_-_Append_User_PlaceHolder": [
-											"Succeeded"
-										]
-									},
-									"type": "ApiConnection",
-									"inputs": {
-										"body": "@string(variables('LatestConversation'))",
-										"headers": {
-											"ReadFileMetadataFromServer": true
-										},
-										"host": {
-											"connection": {
-												"name": "@parameters('$connections')['azureblob']['connectionId']"
-											}
-										},
-										"method": "put",
-										"path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent(parameters('storageaccountName')))}/files/@{encodeURIComponent(encodeURIComponent(parameters('containerName'),'/',body('Parse_JSON_3')?['replyToId'],'.json'))}"
-									}
-								},
-                                "HTTP_1": {
                                     "runAfter": {
-                                        "HTTP_2": [
+                                        "Append_to_array_variable_-_Append_User_PlaceHolder": [
                                             "Succeeded"
                                         ]
                                     },
-                                    "type": "Http",
+                                    "type": "ApiConnection",
                                     "inputs": {
-                                        "uri": "[concat(parameters('aisearch_endpoint'), '/indexes/', parameters('indexes'), '/docs/search?api-version=2023-10-01-Preview')]",
-                                        "method": "POST",
-                                        "headers": {
-                                            "Content-Type": "application/json",
-                                            "api-key": "[parameters('aisearch_apikey')]"
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                            }
                                         },
-                                        "body": {
-                                            "answers": "extractive",
-                                            "captions": "extractive",
-                                            "queryLanguage": "ja-JP",
-                                            "queryType": "semantic",
-                                            "search": "@{outputs('Compose_-_Format_Teams_message')}",
-                                            "select": "<取ってくるインデックスのフィールドをカンマ区切りで記入>",
-                                            "semanticConfiguration": "[parameters('aisearch_index')]",
-                                            "top": "50",
-                                            "vectorQueries": [
-                                                {
-                                                    "fields": "embedding",
-                                                    "k": 50,
-                                                    "kind": "vector",
-                                                    "vector": "@body('HTTP_2')['data'][0]['embedding']"
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    "runtimeConfiguration": {
-                                        "contentTransfer": {
-                                            "transferMode": "Chunked"
-                                        }
+                                        "method": "put",
+                                        "body": "@string(variables('LatestConversation'))",
+                                        "headers": {
+                                            "ReadFileMetadataFromServer": true
+                                        },
+                                        "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent(parameters('storageaccountName')))}/files/@{encodeURIComponent(encodeURIComponent(parameters('containerName'),'/',body('Parse_JSON_3')?['replyToId'],'.json'))}"
                                     }
                                 },
-                                "HTTP_2": {
+                                "HTTP_Convert_the_question_to_a_vector": {
                                     "runAfter": {
-                                        "Compose_-_Format_Teams_message": [
+                                        "Create_blob_(V2)": [
                                             "Succeeded"
                                         ]
                                     },
@@ -576,7 +478,7 @@
                                             "api-key": "[parameters('openai_apikey')]"
                                         },
                                         "body": {
-                                            "input": "@{outputs('Compose_-_Format_Teams_message')}"
+                                            "input": "@{outputs('Compose_-_Format_Teams_message-copy')}"
                                         }
                                     },
                                     "runtimeConfiguration": {
@@ -584,10 +486,168 @@
                                             "transferMode": "Chunked"
                                         }
                                     }
+                                },
+                                "HTTP_AI_Search": {
+                                    "runAfter": {
+                                        "HTTP_Convert_the_question_to_a_vector": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Http",
+                                    "inputs": {
+                                        "uri": "[concat(parameters('aisearch_endpoint'), '/indexes/', parameters('aisearch_index'), '/docs/search?api-version=2023-10-01-Preview')]",
+                                        "method": "POST",
+                                        "headers": {
+                                            "Content-Type": "application/json",
+                                            "api-key": "[parameters('aisearch_apikey')]"
+                                        },
+                                        "body": {
+                                            "answers": "extractive",
+                                            "captions": "extractive",
+                                            "queryLanguage": "ja-JP",
+                                            "queryType": "semantic",
+                                            "search": "@{outputs('Compose_-_Format_Teams_message-copy')}",
+                                            "select": "content,metadata_spo_item_name",
+                                            "semanticConfiguration": "[parameters('semantic_configuration')]",
+                                            "top": "50",
+                                            "vectorQueries": [
+                                                {
+                                                    "fields": "embedding",
+                                                    "k": 50,
+                                                    "kind": "vector",
+                                                    "vector": "@body('HTTP_Convert_the_question_to_a_vector')['data'][0]['embedding']"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "runtimeConfiguration": {
+                                        "contentTransfer": {
+                                            "transferMode": "Chunked"
+                                        }
+                                    }
+                                },
+                                "Compose_-_Format_Teams_message-copy": {
+                                    "runAfter": {
+                                        "Parse_JSON_3": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose",
+                                    "inputs": "@replace(replace(replace(replace(replace(body('Parse_JSON_3')?['body']?['plainTextContent'], '\\', '\\'), '\"', '\\\"'), '\n', '\r'), '\n', '\n'), 'dev-kaku', '')"
+                                },
+                                "Compose_HistoricalMessages": {
+                                    "runAfter": {
+                                        "Set_Content": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose",
+                                    "inputs": "@replace(variables('HistoricalMessages'), '{{UserPlaceHolder}}', outputs('Compose_-_Format_Teams_message-copy'))"
+                                },
+                                "HTTP_AOAI_Create_answer-copy": {
+                                    "runAfter": {
+                                        "Set_Request_Messages": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Http",
+                                    "inputs": {
+                                        "uri": "[parameters('openai_endpoint')]",
+                                        "method": "POST",
+                                        "headers": {
+                                            "Content-Type": "application/json",
+                                            "api-key": "[parameters('openai_apikey')]"
+                                        },
+                                        "body": {
+                                            "frequency_penalty": 0,
+                                            "max_tokens": 400,
+                                            "messages": "@json(variables('HistoricalMessages'))",
+                                            "presence_penalty": 0,
+                                            "stop": null,
+                                            "temperature": 0.7,
+                                            "top_p": 0.95
+                                        }
+                                    }
+                                },
+                                "HTTP_AOAI_Create_answer": {
+                                    "runAfter": {
+                                        "HTTP_AI_Search": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Http",
+                                    "inputs": {
+                                        "uri": "[parameters('openai_endpoint')]",
+                                        "method": "POST",
+                                        "headers": {
+                                            "Content-Type": "application/json",
+                                            "api-key": "[parameters('openai_apikey')]"
+                                        },
+                                        "body": {
+                                            "messages": [
+                                                {
+                                                    "content": "You are an excellent assistant. You are answering the user's question in Japanese based on the context. If you answer based on the context, please also tell the user the metadata_spo_item_name of the document you referenced. If there is no information related to the context, please answer as much as you know.",
+                                                    "role": "system"
+                                                },
+                                                {
+                                                    "content": "<context><doc1>@{body('HTTP_AI_Search')?['value'][0]['metadata_spo_item_name']}:@{body('HTTP_AI_Search')?['value'][0]['content']}</doc1><doc2>@{body('HTTP_AI_Search')?['value'][1]['metadata_spo_item_name']}:@{body('HTTP_AI_Search')?['value'][1]['content']}</doc2><doc3>@{body('HTTP_AI_Search')?['value'][2]['metadata_spo_item_name']}:@{body('HTTP_AI_Search')?['value'][2]['content']}<doc3></context><question>@{outputs('Compose_-_Format_Teams_message-copy')}</question>",
+                                                    "role": "user"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                },
+                                "Set_ai_responce_object": {
+                                    "runAfter": {
+                                        "Set_First_AIRole": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                        "name": "ai_responce_object",
+                                        "value": "@body('HTTP_AOAI_Create_answer')"
+                                    }
+                                },
+                                "Set_ai_responce_object-copy": {
+                                    "runAfter": {
+                                        "HTTP_AOAI_Create_answer-copy": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                        "name": "ai_responce_object",
+                                        "value": "@body('HTTP_AOAI_Create_answer-copy')"
+                                    }
+                                },
+                                "Set_Request_Messages": {
+                                    "runAfter": {
+                                        "Compose_HistoricalMessages": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                        "name": "HistoricalMessages",
+                                        "value": "@outputs('Compose_HistoricalMessages')"
+                                    }
+                                },
+                                "Set_First_AIRole": {
+                                    "runAfter": {
+                                        "HTTP_AOAI_Create_answer": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                        "name": "HistoricalMessages",
+                                        "value": "[\n\t\t{\n\t\t\t\"role\": \"system\",\n\t\t\t\"content\": \"You are an excellent assistant. You are answering the user's question in Japanese based on the context. If you answer based on the context, please also tell the user the metadata_spo_item_name of the document you referenced. If there is no information related to the context, please answer as much as you know.\"\n\t\t}\n\n\t]\n"
+                                    }
                                 }
                             },
                             "runAfter": {
-                                "Initialize_variable_2": [
+                                "Create_ai_response_object": [
                                     "Succeeded"
                                 ]
                             },
@@ -598,7 +658,7 @@
                                 }
                             }
                         },
-                        "Initialize_variable": {
+                        "Create_HistoricalMessages": {
                             "runAfter": {},
                             "type": "InitializeVariable",
                             "inputs": {
@@ -610,9 +670,9 @@
                                 ]
                             }
                         },
-                        "Initialize_variable_2": {
+                        "Create_LastConversation-array": {
                             "runAfter": {
-                                "Initialize_variable": [
+                                "Create_HistoricalMessages": [
                                     "Succeeded"
                                 ]
                             },
@@ -623,6 +683,22 @@
                                         "name": "LatestConversation",
                                         "type": "array",
                                         "value": []
+                                    }
+                                ]
+                            }
+                        },
+                        "Create_ai_response_object": {
+                            "runAfter": {
+                                "Create_LastConversation-array": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ai_responce_object",
+                                        "type": "object"
                                     }
                                 ]
                             }
