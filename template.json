@@ -51,9 +51,6 @@
         },
         "openai_embedding_endpoint": {
             "type": "string"
-        },
-        "semantic_configuration": {
-            "type": "string"
         }
 	},
 	"variables": {},
@@ -508,7 +505,7 @@
                                             "queryType": "semantic",
                                             "search": "@{outputs('Compose_-_Format_Teams_message-copy')}",
                                             "select": "content,metadata_spo_item_name",
-                                            "semanticConfiguration": "[parameters('semantic_configuration')]",
+                                            "semanticConfiguration": "sp-semantic-config",
                                             "top": "50",
                                             "vectorQueries": [
                                                 {
