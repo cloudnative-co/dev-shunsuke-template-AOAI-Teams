@@ -533,7 +533,7 @@
                                         ]
                                     },
                                     "type": "Compose",
-                                    "inputs": "@replace(replace(replace(replace(replace(body('Parse_JSON_3')?['body']?['plainTextContent'], '\\', '\\'), '\"', '\\\"'), '\n', '\r'), '\n', '\n'), 'dev-kaku', '')"
+                                    "inputs": "@replace(replace(replace(replace(replace(body('Parse_JSON_3')?['body']?['plainTextContent'], '\\', '\\'), '\"', '\\\"'), '\n', '\r'), '\n', '\n'), ' ', '')"
                                 },
                                 "Compose_HistoricalMessages": {
                                     "runAfter": {
