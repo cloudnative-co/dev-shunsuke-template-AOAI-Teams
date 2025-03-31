@@ -29,7 +29,7 @@
 			"type": "string"
 		},
 		"container_name": {
-			"defaultValue": "gpt",
+			"defaultValue": "chatlog",
 			"type": "string"
 		},
 		"connections_teams_name": {
